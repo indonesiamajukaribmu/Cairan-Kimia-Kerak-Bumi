@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GeoFluids — Cairan Kimia dari Kerak & Lempeng Bumi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#0d0a07;
+    --bg-1:#15110c;
+    --bg-2:#1f1810;
+    --bg-3:#2a2117;
+    --line:#3a2e20;
+    --line-soft:#2a2218;
+    --amber:#f0a040;
+    --amber-deep:#d97706;
+    --rust:#c2410c;
+    --ember:#ef6c1a;
+    --teal:#3fb8af;
+    --teal-deep:#0f766e;
+    --gold:#fbbf24;
+    --clay:#a87b5c;
+    --magma:#ff5a1f;
+    --text:#f5efe6;
+    --text-mute:#a99884;
+    --text-dim:#7a6a57;
+    --glass:rgba(255,240,210,0.04);
+    --glass-strong:rgba(255,240,210,0.07);
+    --shadow:0 30px 60px -20px rgba(0,0,0,0.7),0 18px 36px -18px rgba(217,119,6,0.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    background:var(--bg-0);
+    color:var(--text);
+    line-height:1.55;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--amber);color:#1a0f04}
+
+  /* === ATMOSPHERIC BACKGROUND === */
+  .atmosphere{
+    position:fixed;inset:0;z-index:-2;overflow:hidden;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(217,119,6,0.18), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 80%, rgba(15,118,110,0.14), transparent 60%),
+      radial-gradient(ellipse 50% 30% at 10% 60%, rgba(194,65,12,0.10), transparent 60%),
+      linear-gradient(180deg,#0d0a07 0%, #120d08 100%);
+  }
+  /* tectonic crack pattern */
+  .atmosphere::before{
+    content:"";position:absolute;inset:0;opacity:0.35;
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'><g fill='none' stroke='%23d97706' stroke-width='0.6' stroke-opacity='0.18'><path d='M0,180 L80,160 L140,190 L220,140 L300,200 L400,170'/><path d='M0,220 L70,250 L160,210 L240,260 L320,230 L400,260'/><path d='M50,0 L70,80 L40,160 L80,240 L60,320 L90,400'/><path d='M200,0 L180,90 L220,170 L190,260 L230,340 L200,400'/><path d='M340,0 L320,80 L360,180 L330,280 L370,400'/></g></svg>");
+    background-size:400px 400px;
+  }
+  /* mineral grain noise */
+  .atmosphere::after{
+    content:"";position:absolute;inset:0;opacity:0.08;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 0.6  0 0 0 0 0.2  0 0 0 1 0'/></filter><rect width='200' height='200' filter='url(%23n)'/></svg>");
+  }
+
+  /* === APP SHELL === */
+  .app{
+    display:grid;
+    grid-template-columns:260px 1fr;
+    min-height:100vh;
+  }
+
+  /* === SIDEBAR === */
+  .sidebar{
+    position:sticky;top:0;height:100vh;
+    background:linear-gradient(180deg,rgba(21,17,12,0.95),rgba(13,10,7,0.95));
+    border-right:1px solid var(--line-soft);
+    backdrop-filter:blur(14px);
+    display:flex;flex-direction:column;
+    padding:24px 18px;
+    z-index:10;
+  }
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:36px;padding:0 6px}
+  .brand-mark{
+    width:42px;height:42px;border-radius:12px;
+    background:
+      radial-gradient(circle at 30% 30%, var(--amber), var(--rust) 60%, #4a1d04 100%);
+    box-shadow:0 0 24px rgba(217,119,6,0.5), inset 0 0 12px rgba(0,0,0,0.4);
+    position:relative;overflow:hidden;
+  }
+  .brand-mark::after{
+    content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(circle at 70% 80%, rgba(255,255,255,0.25), transparent 30%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='42' height='42'><path d='M0,30 Q14,24 21,28 T42,26' stroke='%23000' stroke-width='0.6' fill='none' opacity='0.4'/><path d='M0,18 Q12,14 22,20 T42,16' stroke='%23000' stroke-width='0.6' fill='none' opacity='0.3'/></svg>");
+  }
+  .brand-text h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:18px;font-weight:700;letter-spacing:-0.02em;
+    background:linear-gradient(135deg,#fff,#f0a040);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .brand-text p{font-size:10px;color:var(--text-dim);letter-spacing:0.15em;text-transform:uppercase;margin-top:2px}
+
+  .nav-label{
+    font-size:10px;color:var(--text-dim);letter-spacing:0.18em;
+    text-transform:uppercase;margin:18px 10px 10px;font-weight:600;
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:12px;
+    padding:11px 14px;border-radius:10px;
+    color:var(--text-mute);font-size:14px;font-weight:500;
+    cursor:pointer;transition:all .2s;
+    position:relative;
+    border:1px solid transparent;
+  }
+  .nav-item:hover{background:var(--glass);color:var(--text)}
+  .nav-item.active{
+    background:linear-gradient(135deg,rgba(217,119,6,0.18),rgba(194,65,12,0.08));
+    color:var(--amber);border-color:rgba(217,119,6,0.3);
+  }
+  .nav-item.active::before{
+    content:"";position:absolute;left:-18px;top:50%;transform:translateY(-50%);
+    width:3px;height:18px;background:var(--amber);border-radius:2px;
+    box-shadow:0 0 12px var(--amber);
+  }
+  .nav-icon{width:18px;height:18px;flex-shrink:0;opacity:0.85}
+  .nav-count{
+    margin-left:auto;font-size:11px;font-family:'JetBrains Mono',monospace;
+    background:var(--glass-strong);padding:2px 8px;border-radius:6px;color:var(--text-dim);
+  }
+  .nav-item.active .nav-count{background:rgba(217,119,6,0.2);color:var(--amber)}
+
+  .sidebar-foot{
+    margin-top:auto;padding:14px;border-radius:12px;
+    background:var(--glass);border:1px solid var(--line-soft);
+    font-size:11px;color:var(--text-dim);line-height:1.5;
+  }
+  .sidebar-foot strong{color:var(--amber);font-weight:600}
+
+  /* === MAIN === */
+  .main{padding:32px 44px 80px;max-width:1280px}
+  @media(max-width:980px){
+    .app{grid-template-columns:1fr}
+    .sidebar{position:relative;height:auto;flex-direction:row;flex-wrap:wrap;gap:8px}
+    .sidebar-foot{display:none}
+    .main{padding:24px 20px 60px}
+    .nav-label{display:none}
+  }
+
+  /* === HERO === */
+  .hero{
+    position:relative;
+    background:linear-gradient(135deg,rgba(42,33,23,0.7),rgba(21,17,12,0.5));
+    border:1px solid var(--line);
+    border-radius:24px;
+    padding:40px 44px;
+    margin-bottom:36px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .hero::before{
+    content:"";position:absolute;inset:0;opacity:0.6;
+    background:
+      /* earth strata layers */
+      linear-gradient(180deg,transparent 0%,transparent 55%,rgba(217,119,6,0.04) 55%,rgba(217,119,6,0.04) 58%,transparent 58%,transparent 65%,rgba(194,65,12,0.05) 65%,rgba(194,65,12,0.05) 70%,transparent 70%,transparent 78%,rgba(74,29,4,0.08) 78%,rgba(74,29,4,0.08) 84%,transparent 84%);
+  }
+  .hero::after{
+    content:"";position:absolute;inset:0;opacity:0.4;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='300'><g fill='none' stroke='%23f0a040' stroke-width='0.5' stroke-opacity='0.25'><path d='M0,150 C100,130 200,170 300,140 S500,160 600,135'/><path d='M0,200 C100,180 200,220 300,190 S500,210 600,185'/><path d='M0,100 C100,80 200,120 300,90 S500,110 600,85'/></g></svg>");
+    background-size:600px 300px;background-position:bottom;
+  }
+  .hero-content{position:relative;z-index:2;display:grid;grid-template-columns:1.4fr 1fr;gap:40px;align-items:center}
+  @media(max-width:780px){.hero-content{grid-template-columns:1fr}}
+  .hero-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:6px 14px;border-radius:99px;
+    background:rgba(217,119,6,0.12);border:1px solid rgba(217,119,6,0.3);
+    font-size:11px;letter-spacing:0.15em;text-transform:uppercase;
+    color:var(--amber);font-weight:600;margin-bottom:18px;
+  }
+  .hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber);animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+  .hero h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:42px;line-height:1.05;letter-spacing:-0.025em;font-weight:700;
+    margin-bottom:16px;
+  }
+  .hero h2 .accent{
+    background:linear-gradient(135deg,var(--amber),var(--magma));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .hero p{color:var(--text-mute);font-size:15px;max-width:520px;margin-bottom:24px}
+  .hero-stats{display:flex;gap:28px;flex-wrap:wrap}
+  .stat{display:flex;flex-direction:column}
+  .stat-num{font-family:'Space Grotesk',sans-serif;font-size:28px;font-weight:700;color:var(--amber)}
+  .stat-num .unit{font-size:14px;color:var(--text-dim);margin-left:2px}
+  .stat-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-top:2px}
+
+  /* earth cross-section art */
+  .earth-art{
+    position:relative;width:100%;aspect-ratio:1;max-width:340px;margin:0 auto;
+  }
+  .earth-art svg{width:100%;height:100%;filter:drop-shadow(0 20px 40px rgba(217,119,6,0.3))}
+  .earth-art .ring{animation:rotate 60s linear infinite;transform-origin:center}
+  .earth-art .ring-2{animation:rotate 90s linear infinite reverse;transform-origin:center}
+  @keyframes rotate{to{transform:rotate(360deg)}}
+
+  /* === SECTION HEADERS === */
+  .section-head{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    margin:48px 0 22px;gap:20px;flex-wrap:wrap;
+  }
+  .section-head h3{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:26px;font-weight:700;letter-spacing:-0.02em;
+    display:flex;align-items:center;gap:12px;
+  }
+  .section-head h3::before{
+    content:"";width:4px;height:24px;border-radius:2px;
+    background:linear-gradient(180deg,var(--amber),var(--rust));
+  }
+  .section-head p{font-size:13px;color:var(--text-dim);max-width:480px;margin-top:6px}
+
+  /* === FILTER BAR === */
+  .filter-bar{
+    display:flex;gap:10px;flex-wrap:wrap;
+    background:var(--glass);border:1px solid var(--line-soft);
+    padding:8px;border-radius:14px;
+  }
+  .chip{
+    padding:8px 16px;border-radius:9px;font-size:13px;font-weight:500;
+    color:var(--text-mute);cursor:pointer;transition:all .2s;
+    border:1px solid transparent;
+  }
+  .chip:hover{color:var(--text);background:var(--glass-strong)}
+  .chip.active{
+    background:linear-gradient(135deg,var(--amber-deep),var(--rust));
+    color:#1a0f04;font-weight:600;
+    box-shadow:0 4px 12px rgba(217,119,6,0.3);
+  }
+
+  /* === CARD GRID === */
+  .grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+    gap:20px;
+  }
+  .card{
+    position:relative;
+    background:linear-gradient(155deg,rgba(31,24,16,0.85),rgba(21,17,12,0.7));
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:24px;
+    overflow:hidden;
+    transition:all .35s cubic-bezier(.2,.7,.2,1);
+    cursor:pointer;
+    backdrop-filter:blur(8px);
+  }
+  .card::before{
+    content:"";position:absolute;inset:0;opacity:0;transition:opacity .4s;
+    background:radial-gradient(circle at 50% 0%, rgba(217,119,6,0.18), transparent 60%);
+  }
+  .card:hover{
+    transform:translateY(-6px);
+    border-color:rgba(217,119,6,0.4);
+    box-shadow:var(--shadow);
+  }
+  .card:hover::before{opacity:1}
+  /* geological texture on card */
+  .card::after{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:0.4;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><g fill='none' stroke='%23f0a040' stroke-width='0.4' stroke-opacity='0.2'><path d='M0,60 Q30,40 60,55 T120,50'/><path d='M0,90 Q30,70 60,85 T120,80'/><path d='M0,30 Q30,10 60,25 T120,20'/></g></svg>");
+    background-size:120px 120px;
+  }
+  .card>*{position:relative;z-index:2}
+
+  .card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
+  .card-icon{
+    width:54px;height:54px;border-radius:14px;
+    display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:hidden;
+    box-shadow:0 8px 20px rgba(0,0,0,0.4);
+  }
+  .card-icon svg{width:30px;height:30px;position:relative;z-index:2}
+  .card-icon .glow{
+    position:absolute;inset:0;
+    background:radial-gradient(circle at 30% 30%, var(--c1), var(--c2));
+  }
+  .card-icon .shimmer{
+    position:absolute;inset:0;
+    background:linear-gradient(135deg,transparent 40%,rgba(255,255,255,0.25) 50%,transparent 60%);
+    animation:shimmer 3s infinite;
+  }
+  @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+  .card-tag{
+    font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;
+    padding:5px 10px;border-radius:6px;
+    background:var(--glass-strong);color:var(--text-mute);
+    border:1px solid var(--line-soft);
+  }
+  .card h4{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:20px;font-weight:700;letter-spacing:-0.01em;
+    margin-bottom:4px;
+  }
+  .card .latin{font-size:12px;color:var(--text-dim);font-style:italic;margin-bottom:14px}
+  .card-desc{font-size:13px;color:var(--text-mute);line-height:1.6;margin-bottom:18px}
+  .card-meta{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+  .meta-row{display:flex;align-items:flex-start;gap:10px;font-size:12px}
+  .meta-row .meta-key{
+    color:var(--text-dim);min-width:88px;font-weight:600;
+    text-transform:uppercase;letter-spacing:0.05em;font-size:10px;
+    padding-top:2px;
+  }
+  .meta-row .meta-val{color:var(--text);flex:1}
+  .card-foot{
+    display:flex;align-items:center;justify-content:space-between;
+    padding-top:16px;border-top:1px dashed var(--line);
+  }
+  .card-foot .depth{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);
+  }
+  .card-foot .depth b{color:var(--amber);font-weight:500}
+  .card-foot .arrow{
+    width:30px;height:30px;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--glass-strong);color:var(--text-mute);
+    transition:all .2s;
+  }
+  .card:hover .arrow{background:var(--amber);color:#1a0f04;transform:translateX(4px)}
+
+  /* === PROCESS FLOW === */
+  .flow{
+    background:linear-gradient(135deg,rgba(31,24,16,0.6),rgba(13,10,7,0.4));
+    border:1px solid var(--line);border-radius:22px;
+    padding:36px;margin-bottom:36px;
+    position:relative;overflow:hidden;
+  }
+  .flow::before{
+    content:"";position:absolute;inset:0;opacity:0.5;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><circle cx='20' cy='20' r='1' fill='%23f0a040' fill-opacity='0.2'/></svg>");
+    background-size:40px 40px;
+  }
+  .flow-title{
+    font-family:'Space Grotesk',sans-serif;font-size:22px;font-weight:700;
+    margin-bottom:6px;position:relative;
+  }
+  .flow-sub{font-size:13px;color:var(--text-dim);margin-bottom:28px;position:relative}
+  .flow-steps{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:14px;
+    position:relative;
+  }
+  @media(max-width:880px){.flow-steps{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.flow-steps{grid-template-columns:1fr}}
+  .flow-step{
+    background:var(--glass);border:1px solid var(--line-soft);
+    border-radius:14px;padding:20px;
+    position:relative;
+    transition:all .3s;
+  }
+  .flow-step:hover{border-color:rgba(217,119,6,0.4);transform:translateY(-3px)}
+  .flow-step-num{
+    font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;
+    color:var(--amber);letter-spacing:0.1em;margin-bottom:10px;
+  }
+  .flow-step h5{font-size:15px;font-weight:600;margin-bottom:8px}
+  .flow-step p{font-size:12px;color:var(--text-mute);line-height:1.55}
+  .flow-step::after{
+    content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);
+    color:var(--amber);font-size:18px;z-index:3;
+    background:var(--bg-1);width:24px;height:24px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    border:1px solid var(--line);
+  }
+  .flow-step:last-child::after{display:none}
+  @media(max-width:880px){
+    .flow-step:nth-child(2)::after{display:none}
+  }
+
+  /* === DETAIL DRAWER === */
+  .drawer-backdrop{
+    position:fixed;inset:0;background:rgba(5,3,1,0.7);backdrop-filter:blur(8px);
+    z-index:50;opacity:0;pointer-events:none;transition:opacity .3s;
+  }
+  .drawer-backdrop.open{opacity:1;pointer-events:auto}
+  .drawer{
+    position:fixed;top:0;right:0;height:100vh;width:min(520px,100%);
+    background:linear-gradient(180deg,var(--bg-2),var(--bg-1));
+    border-left:1px solid var(--line);
+    z-index:51;transform:translateX(100%);transition:transform .4s cubic-bezier(.2,.7,.2,1);
+    overflow-y:auto;
+    box-shadow:-30px 0 60px rgba(0,0,0,0.5);
+  }
+  .drawer.open{transform:translateX(0)}
+  .drawer-head{
+    padding:28px 28px 20px;border-bottom:1px solid var(--line-soft);
+    background:linear-gradient(135deg,rgba(217,119,6,0.08),transparent);
+    position:relative;
+  }
+  .drawer-close{
+    position:absolute;top:20px;right:20px;width:32px;height:32px;
+    border-radius:8px;background:var(--glass);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    color:var(--text-mute);transition:all .2s;
+  }
+  .drawer-close:hover{background:var(--rust);color:#fff}
+  .drawer-icon{
+    width:62px;height:62px;border-radius:16px;
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:14px;position:relative;overflow:hidden;
+    box-shadow:0 8px 20px rgba(0,0,0,0.4);
+  }
+  .drawer-icon svg{width:34px;height:34px;position:relative;z-index:2}
+  .drawer-head h4{
+    font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;
+    margin-bottom:4px;letter-spacing:-0.01em;
+  }
+  .drawer-head .latin{color:var(--text-dim);font-size:13px;font-style:italic}
+  .drawer-body{padding:24px 28px 60px}
+  .drawer-section{margin-bottom:26px}
+  .drawer-section h6{
+    font-size:11px;text-transform:uppercase;letter-spacing:0.15em;
+    color:var(--amber);font-weight:700;margin-bottom:12px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .drawer-section h6::before{
+    content:"";width:18px;height:2px;background:var(--amber);
+  }
+  .drawer-section p{font-size:14px;color:var(--text-mute);line-height:1.7}
+  .drawer-list{display:flex;flex-direction:column;gap:10px}
+  .drawer-list li{
+    list-style:none;font-size:13px;color:var(--text-mute);
+    padding-left:18px;position:relative;line-height:1.6;
+  }
+  .drawer-list li::before{
+    content:"";position:absolute;left:0;top:9px;
+    width:6px;height:6px;border-radius:50%;
+    background:linear-gradient(135deg,var(--amber),var(--rust));
+  }
+  .drawer-list li b{color:var(--text);font-weight:600}
+  .drawer-stats{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  }
+  .drawer-stat{
+    background:var(--glass);border:1px solid var(--line-soft);
+    border-radius:12px;padding:14px;
+  }
+  .drawer-stat .k{font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
+  .drawer-stat .v{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;color:var(--amber)}
+
+  /* === FOOTER === */
+  .footer{
+    margin-top:60px;padding:28px 0;border-top:1px solid var(--line-soft);
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;
+    font-size:12px;color:var(--text-dim);
+  }
+  .footer .footer-brand{display:flex;align-items:center;gap:10px}
+  .footer .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 10px var(--amber)}
+
+  /* === ANIMATIONS === */
+  .fade-up{opacity:0;transform:translateY(20px);animation:fadeUp .6s forwards}
+  @keyframes fadeUp{to{opacity:1;transform:translateY(0)}}
+  .reveal{opacity:0;transform:translateY(30px);transition:all .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.visible{opacity:1;transform:translateY(0)}
+
+  /* scrollbar */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:var(--bg-1)}
+  ::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:5px;border:2px solid var(--bg-1)}
+  ::-webkit-scrollbar-thumb:hover{background:var(--line)}
+</style>
+</head>
+<body>
+
+<div class="atmosphere"></div>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-text">
+        <h1>GeoFluids</h1>
+        <p>Earth Chemistry Atlas</p>
+      </div>
+    </div>
+
+    <div class="nav-label">Sumber Cairan</div>
+    <div class="nav-item active" data-filter="all">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
+      Semua Sumber
+      <span class="nav-count">7</span>
+    </div>
+    <div class="nav-item" data-filter="sedimen">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 18l4-6 4 4 4-8 6 10z"/></svg>
+      Cekungan Sedimen
+      <span class="nav-count">2</span>
+    </div>
+    <div class="nav-item" data-filter="lempeng">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M12 2v20M5 5l14 14M19 5L5 19"/></svg>
+      Batas Lempeng
+      <span class="nav-count">2</span>
+    </div>
+    <div class="nav-item" data-filter="vulkanik">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 4l-2 4-3-2-4 7h18l-3-6-3 2-3-5z"/><path d="M5 18h14"/></svg>
+      Zona Vulkanik
+      <span class="nav-count">2</span>
+    </div>
+    <div class="nav-item" data-filter="hidrotermal">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2c0 4-5 6-5 11a5 5 0 0010 0c0-5-5-7-5-11z"/></svg>
+      Hidrotermal
+      <span class="nav-count">1</span>
+    </div>
+
+    <div class="nav-label" style="margin-top:24px">Informasi</div>
+    <div class="nav-item" id="navProcess">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+      Alur Proses
+    </div>
+    <div class="nav-item" id="navAbout">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+      Tentang Atlas
+    </div>
+
+    <div class="sidebar-foot">
+      <strong>Atlas Geokimia</strong><br>
+      Kompilasi 7 cairan utama dari kerak & lempeng bumi yang menjadi bahan baku industri kimia modern.
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- HERO -->
+    <section class="hero fade-up">
+      <div class="hero-content">
+        <div>
+          <div class="hero-badge"><span class="dot"></span>Atlas Geokimia · 2026</div>
+          <h2>Cairan Kimia dari <span class="accent">Perut Bumi</span></h2>
+          <p>Eksplorasi tujuh cairan utama yang terbentuk dari proses geologi kerak bumi dan pergerakan lempeng tektonik — bahan baku vital bagi industri kimia modern, dari petrokimia hingga klor-alkali.</p>
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-num">7<span class="unit">cairan</span></div>
+              <div class="stat-label">Jenis Sumber</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num">0,1–10<span class="unit">km</span></div>
+              <div class="stat-label">Kedalaman</div>
+            </div>
+            <div class="stat">
+              <div class="stat-num">3000+<span class="unit"></span></div>
+              <div class="stat-label">Turunan Kimia</div>
+            </div>
+          </div>
+        </div>
+        <div class="earth-art">
+          <svg viewBox="0 0 400 400">
+            <defs>
+              <radialGradient id="coreG" cx="50%" cy="50%">
+                <stop offset="0%" stop-color="#fff5d9"/>
+                <stop offset="30%" stop-color="#f0a040"/>
+                <stop offset="70%" stop-color="#c2410c"/>
+                <stop offset="100%" stop-color="#4a1d04"/>
+              </radialGradient>
+              <radialGradient id="mantleG" cx="50%" cy="50%">
+                <stop offset="60%" stop-color="transparent"/>
+                <stop offset="100%" stop-color="#2a2117" stop-opacity="0.6"/>
+              </radialGradient>
+            </defs>
+            <!-- rotating outer ring -->
+            <g class="ring">
+              <circle cx="200" cy="200" r="180" fill="none" stroke="#3a2e20" stroke-width="1" stroke-dasharray="2 6"/>
+              <circle cx="200" cy="200" r="180" fill="none" stroke="#f0a040" stroke-width="0.5" stroke-opacity="0.4"/>
+              <circle cx="380" cy="200" r="3" fill="#f0a040"/>
+              <circle cx="200" cy="20" r="2" fill="#3fb8af"/>
+              <circle cx="20" cy="200" r="2" fill="#ef6c1a"/>
+            </g>
+            <g class="ring-2">
+              <circle cx="200" cy="200" r="150" fill="none" stroke="#d97706" stroke-width="0.8" stroke-dasharray="4 4" stroke-opacity="0.5"/>
+            </g>
+            <!-- earth cross section -->
+            <circle cx="200" cy="200" r="120" fill="url(#coreG)"/>
+            <circle cx="200" cy="200" r="120" fill="url(#mantleG)"/>
+            <!-- strata lines -->
+            <g fill="none" stroke="#4a1d04" stroke-width="0.6" stroke-opacity="0.5">
+              <path d="M100,200 Q200,170 300,200"/>
+              <path d="M105,215 Q200,195 295,215"/>
+              <path d="M110,185 Q200,160 290,185"/>
+              <path d="M115,230 Q200,210 285,230"/>
+            </g>
+            <!-- crack lines -->
+            <g fill="none" stroke="#fff5d9" stroke-width="0.5" stroke-opacity="0.4">
+              <path d="M200,80 L195,140 L210,180 L200,200"/>
+              <path d="M200,200 L240,210 L280,200"/>
+              <path d="M200,200 L165,220 L130,210"/>
+            </g>
+            <!-- center hot dot -->
+            <circle cx="200" cy="200" r="6" fill="#fff5d9">
+              <animate attributeName="r" values="6;9;6" dur="3s" repeatCount="indefinite"/>
+              <animate attributeName="opacity" values="1;0.6;1" dur="3s" repeatCount="indefinite"/>
+            </circle>
+            <!-- labels -->
+            <text x="200" y="38" text-anchor="middle" fill="#a99884" font-size="9" font-family="JetBrains Mono" letter-spacing="2">KOR</text>
+            <text x="200" y="378" text-anchor="middle" fill="#a99884" font-size="9" font-family="JetBrains Mono" letter-spacing="2">INTI</text>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROCESS FLOW -->
+    <section class="flow reveal" id="processFlow">
+      <div class="flow-title">Alur Proses: Dari Kerak Bumi ke Bahan Kimia</div>
+      <div class="flow-sub">Empat tahapan utama transformasi cairan geologi menjadi bahan kimia siap pakai</div>
+      <div class="flow-steps">
+        <div class="flow-step">
+          <div class="flow-step-num">TAHAP 01</div>
+          <h5>Ekstraksi Geologis</h5>
+          <p>Pengangkatan cairan dari formasi bawah tanah melalui pengeboran sumur minyak/gas, sumur garam, atau penangkapan air panas bumi pada kedalaman 0,1–10 km.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">TAHAP 02</div>
+          <h5>Pemisahan Awal</h5>
+          <p>Separasi fraksi melalui destilasi, dekantasi, atau filtrasi — memisahkan cairan dari pengotor padatan, gas terlarut, dan air formasi.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">TAHAP 03</div>
+          <h5>Konversi Kimia</h5>
+          <p>Reaksi katalitik — cracking, reforming, elektrolisis, oksidasi, atau halogenasi — mengubah molekul sumber menjadi intermediat kimia yang lebih reaktif.</p>
+        </div>
+        <div class="flow-step">
+          <div class="flow-step-num">TAHAP 04</div>
+          <h5>Pemurnian Akhir</h5>
+          <p>Destilasi fraksionasi lanjutan, kristalisasi, atau absorbsi menghasilkan bahan kimia murni berkualitas industri: etilena, metanol, NaOH, H₂SO₄, dan lainnya.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION HEADER -->
+    <div class="section-head reveal">
+      <div>
+        <h3>Cairan Utama dari Kerak & Lempeng Bumi</h3>
+        <p>Klik kartu untuk melihat detail sumber geologis, komposisi, dan turunan kimianya.</p>
+      </div>
+      <div class="filter-bar">
+        <div class="chip active" data-filter="all">Semua</div>
+        <div class="chip" data-filter="sedimen">Sedimen</div>
+        <div class="chip" data-filter="lempeng">Lempeng</div>
+        <div class="chip" data-filter="vulkanik">Vulkanik</div>
+        <div class="chip" data-filter="hidrotermal">Hidrotermal</div>
+      </div>
+    </div>
+
+    <!-- CARD GRID -->
+    <div class="grid" id="cardGrid"></div>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="footer-brand">
+        <span class="dot"></span>
+        <span><b>GeoFluids</b> · Atlas Geokimia Cairan Bumi</span>
+      </div>
+      <div>Disusun untuk pembelajaran geokimia & industri kimia · 2026</div>
+    </footer>
+
+  </main>
+</div>
+
+<!-- DRAWER -->
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head" id="drawerHead"></div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<script>
+// === DATA: 7 cairan utama ===
+const fluids = [
+  {
+    id:'minyak-bumi',
+    name:'Minyak Bumi',
+    latin:'Petroleum / Crude Oil',
+    tag:'Cekungan Sedimen',
+    cat:'sedimen',
+    c1:'#3a2410', c2:'#1a0f04',
+    icon:`<svg viewBox="0 0 24 24" fill="none" stroke="#f0a040" stroke-width="2"><path d="M12 2c0 4-5 6-5 11a5 5 0 0010 0c0-5-5-7-5-11z"/></svg>`,
+    desc:'Cairan hidrokarbon kompleks berwarna coklat-hitam yang terbentuk dari sisa organisme purba yang terkubur di cekungan sedimen selama jutaan tahun pada suhu & tekanan tinggi.',
+    depth:'1–6 km',
+    temp:'60–150°C',
+    source:'Cekungan sedimen maritim & daratan',
+    composition:'Alkana, sikloalkana, aromatik, aspalten, sulfur, logam renik',
+    products:'Etilena, propilena, benzena, pelarut, plastik, pupuk, farmasi',
+    detail:'Minyak bumi terbentuk dari pemecahan anaerobik organisme mikroskopis (fitoplankton, zooplankton) yang mengendap di dasar laut purba dan terkubur oleh lapisan sedimen selama 60–300 juta tahun. Pada kedalaman 1–6 km dengan suhu 60–150°C, materi organik mengalami katagenesis menjadi kerogen lalu minyak. Setelah diekstraksi melalui sumur bor, minyak bumi menjalani distilasi bertingkat di kilang untuk menghasilkan fraksi LPG, bensin, kerosin, diesel, minyak berat, dan residu.',
+    process:['Pengeboran sumur minyak di cekungan sedimen','Distilasi bertingkat (fractional distillation) di kilang','Cracking katalitik untuk memecah rantai panjang','Reforming untuk meningkatkan bilangan oktan','Pemurnian untuk menghasilkan etilena, propilena, benzena'],
+    uses:['Petrokimia: plastik, karet sintetis, serat','Pelarut industri: benzena, toluena, xilena','Bahan baku pupuk urea & amonia','Bahan baku farmasi & kosmetik','Bahan bakar transportasi & energi'],
+    stat:[{k:'Rentang Kedalaman',v:'1–6 km'},{k:'Suhu Pembentukan',v:'60–150°C'},{k:'Fraksi Utama',v:'C5–C40+'},{k:'Produksi Global',v:'4,5 Gt/thn'}]
+  },
+  {
+    id:'kondensat-gas',
+    name:'Kondensat Gas Alam',
+    latin:'Natural Gas Liquids (NGL)',
+    tag:'Cekungan Sedimen',
+    cat:'sedimen',
+    c1:'#3fb8af', c2:'#0f766e',
+    icon:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 12c0-4 4-7 8-7s8 3 8 7-4 7-8 7-8-3-8-7z"/><path d="M8 12h8M12 8v8"/></svg>`,
+    desc:'Campuran cairan hidrokarbon ringan (etana, propana, butana, pentana) yang mengembun dari gas alam saat ditekan dan didinginkan di permukaan.',
+    depth:'1–5 km',
+    temp:'80–200°C',
+    source:'Formasi gas alam basah di batuan pasir & karbonat',
+    composition:'Etana, propana, butana, isobutana, pentana, heksana+',
+    products:'Etilena, propilena, polietilena, polipropilena, LPG',
+    detail:'Kondensat gas alam adalah fraksi cair yang terpisah dari gas alam saat tekanan formasi turun saat mencapai permukaan. Cairan ini lebih ringan dari minyak bumi dan sangat kaya etana — bahan baku utama etilena melalui proses steam cracking. NGL diolah di gas processing plant melalui refrigerasi, absorpsi, atau cryogenic expansion untuk memisahkan komponennya menjadi produk komersial.',
+    process:['Pemisahan dari gas alam di wellhead','Penyaringan di gas processing plant','Cryogenic separation untuk fraksi ringan','Steam cracking etana menjadi etilena','Polimerisasi menjadi polietilena (PE)'],
+    uses:['Bahan baku etilena & polietilena','LPG untuk rumah tangga & industri','Propilena untuk polipropilena','Bahan baku karet sintetis','Bahan baku pelarut ringan'],
+    stat:[{k:'Kedalaman',v:'1–5 km'},{k:'Fraksi Utama',v:'C2–C5'},{k:'Rendemen Etana',v:'60–80%'},{k:'Kontribusi Etilena',v:'40% global'}]
+  },
+  {
+    id:'brine-garam',
+    name:'Larutan Garam (Brine)',
+    latin:'Salt Brine Solution',
+    tag:'Formasi Garam',
+    cat:'sedimen',
+    c1:'#fbbf24', c2:'#a16207',
+    icon:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2M3 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2M3 7c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2"/></svg>`,
+    desc:'Larutan jenuh natrium klorida dari formasi garam bawah tanah atau larutan hasil pelarutan deposit garam batu yang menjadi bahan baku proses klor-alkali.',
+    depth:'0,1–3 km',
+    temp:'25–80°C',
+    source:'Dome garam, endapan evaporit, air laut',
+    composition:'NaCl 25–30%, MgCl₂, CaCl₂, KCl, bromida, sulfat',
+    products:'Klorin (Cl₂), natrium hidroksida (NaOH), hidrogen (H₂), soda abu',
+    detail:'Brine geologis diperoleh dengan dua metode: (1) pelarutan deposit garam batu (halite) bawah tanah dengan air yang dipompa melalui sumur, dan (2) penambangan air formasi asin dari akuifer dalam. Brine kemudian dimurnikan untuk menghilangkan kalsium, magnesium, dan sulfat sebelum dielektrolisis dalam sel klor-alkali. Proses ini menghasilkan tiga produk kimia fundamental: klorin, natrium hidroksida, dan hidrogen — fondasi industri klor-alkali senilai miliaran dolar.',
+    process:['Larutkan deposit garam batu dengan air','Pemurnian brine dari pengotor kation','Elektrolisis dalam sel membran/raksa/diafragma','Pemisahan klorin, NaOH, dan H₂','Pemurnian & penyimpanan produk'],
+    uses:['Klorin untuk PVC, pelarut, disinfektan','NaOH untuk kertas, sabun, tekstil','Soda abu (Na₂CO₃) untuk kaca & detergen','Hidrogen untuk amonia & bahan bakar','Bromin & iodin dari brine kaya halogen'],
+    stat:[{k:'Konsentrasi NaCl',v:'25–30%'},{k:'Tegangan Sel',v:'3,2–3,5 V'},{k:'Konsumsi Energi',v:'2,2 MWh/t Cl₂'},{k:'Produksi Global',v:'80 Mt Cl₂/thn'}]
+  },
+  {
+    id:'air-panas-bumi',
+    name:'Air Panas Bumi',
+    latin:'Geothermal Brine',
+    tag:'Batas Lempeng',
+    cat:'lempeng',
+    c1:'#ef6c1a', c2:'#7c2d12',
+    icon:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2v4M12 18v4M8 12H4M20 12h-4M6 6l3 3M18 6l-3 3M6 18l3-3M18 18l-3-3"/><circle cx="12" cy="12" r="3"/></svg>`,
+    desc:'Cairan hidrotermal bersuhu tinggi yang bersirkulasi di sepanjang batas lempeng tektonik aktif, kaya mineral terlarut seperti silika, litium, dan boron.',
+    depth:'1–4 km',
+    temp:'150–350°C',
+    source:'Sistem geotermal di batas lempeng konvergen & hotspot',
+    composition:'Air, silika (SiO₂), litium, boron, kalium, arsen, sulfat, klorida',
+    products:'Litium karbonat, asam borat, silika presipitat, amonia',
+    detail:'Air panas bumi terbentuk saat air meteorik meresap ke kerak bumi melalui patahan, dipanaskan oleh magma atau batuan panas di kedalaman, lalu bersirkulasi balik ke permukaan membawa ribuan ppm mineral terlarut. Indonesia, terletak di Cincin Api Pasifik, memiliki cadangan geotermal terbesar di dunia (28 GW potensi). Sekarang, brine geotermal mulai ditambang sebagai sumber litium sekunder untuk baterai kendaraan listrik — sebuah revolusi ekonomi sirkular.',
+    process:['Pengeboran sumur geotermal di zona patahan','Ekstraksi panas untuk pembangkit listrik','Penambangan mineral dari brine bekas','Presipitasi litium sebagai Li₂CO₃','Pemurnian silika & boron untuk industri'],
+    uses:['Litium karbonat untuk baterai Li-ion','Asam borat untuk kaca & keramik','Silika presipitat untuk karet & cat','Pembangkit listrik tenaga panas bumi','Amonia dari nitrogen terlarut'],
+    stat:[{k:'Suhu Brine',v:'150–350°C'},{k:'Kandungan Li',v:'100–300 ppm'},{k:'Potensi Indonesia',v:'28 GW'},{k:'Recovery Li',v:'80–90%'}]
+  },
+  {
+    id:'cairan-vulkanik',
+    name:'Larutan Belerang Vulkanik',
+    latin:'Volcanic Sulfur Solution',
+    tag:'Zona Vulkanik',
+    cat:'vulkanik',
+    c1:'#fbbf24', c2:'#92400e',
+    icon:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M14 4l-2 4-3-2-4 7h18l-3-6-3 2-3-5z"/><path d="M5 18h14"/></svg>`,
+    desc:'Larutan asam sulfat alami dan gas belerang yang terkondensasi dari fumarola & kawah vulkanik aktif di zona subduksi lempeng.',
+    depth:'0–2 km',
+    temp:'80–400°C',
+    source:'Kawah, fumarola, solfatara gunung api aktif',
+    composition:'H₂SO₄, SO₂, H₂S, HCl, HF, uap air, logam volatil',
+    products:'Asam sulfat (H₂SO₄), sulfur murni, garam sulfat',
+    detail:'Belerang vulkanik muncul sebagai gas SO₂ dan H₂S yang dilepaskan dari magma yang naik di sepanjang zona subduksi lempeng. Gas ini terkondensasi di permukaan kawah membentuk endapan sulfur natif dan larutan asam sulfat pekat. Eksploitasi langsung dilakukan di gunung berapi aktif seperti Kawah Ijen (Indonesia), di mana penambang mengumpulkan sulfur natif. Secara industri, belerang vulkanik menjadi sumber asam sulfat — king of chemicals — yang digunakan di hampir semua industri kimia.',
+    process:['Kondensasi gas SO₂ di kawah vulkanik','Pengumpulan endapan sulfur natif','Pembakaran sulfur menjadi SO₂','Konversi SO₂ → SO₃ dengan katalis V₂O₅','Absorpsi SO₃ dalam air → H₂SO₄ pekat'],
+    uses:['Asam sulfat untuk baterai & pemurnian logam','Pupuk superfosfat untuk pertanian','Sulfonasi detergen & bahan surfaktan','Vulkanisasi karet alam & sintetis','Pemurnian tembaga & uranium'],
+    stat:[{k:'Suhu Fumarola',v:'80–400°C'},{k:'Konsentrasi H₂SO₄',v:'70–95%'},{k:'Produksi H₂SO₄',v:'260 Mt/thn'},{k:'Komposisi Sulfur',v:'99,5% S'}]
+  },
+  {
+    id:'air-formasi',
+    name:'Air Formasi (Formation Water)',
+    latin:'Connate / Produced Water',
+    tag:'Cekungan Sedimen',
+    cat:'sedimen',
+    c1:'#3fb8af', c2:'#155e75',
+    icon:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2c0 5-7 7-7 13a7 7 0 0014 0c0-6-7-8-7-13z"/></svg>`,
+    desc:'Air garam sangat pekat yang terperangkap di pori batuan sedimen selama jutaan tahun, sering kali terproduksi bersama minyak & gas bumi.',
+    depth:'0,5–6 km',
+    temp:'40–180°C',
+    source:'Formasi batuan pasir & karbonat dalam',
+    composition:'NaCl 10–25%, yodium, bromin, kalium, barium, logam renik',
+    products:'Yodium, bromin, kalium klorida, barium sulfat',
+    detail:'Air formasi adalah air laut purba yang terperangkap saat sedimen diendapkan jutaan tahun lalu. Selama proses diagenesis, komposisinya berubah drastis — menjadi sangat asin dan kaya ion langka seperti yodium (50–2000 ppm) dan bromin (500–3000 ppm). Jepang, dengan cadangan yodium terbesar di dunia, menambang yodium dari air formasi di deposit gas bumi di Chiba. Bromin dari air formasi Laut Mati menyumbang 30% pasokan dunia.',
+    process:['Produksi bersama minyak & gas bumi','Pemisahan minyak dari air formasi','Konsentrasi & evaporasi larutan','Oksidasi yodida → yodium dengan Cl₂','Ekstraksi bromin dengan uap udara'],
+    uses:['Yodium untuk kontras medis & antiseptik','Bromin untuk flame retardant & fumigan','KCl untuk pupuk kalium','Barium sulfat untuk radiologi & pengeboran','Garam industri khusus'],
+    stat:[{k:'Salinitas',v:'10–25% NaCl'},{k:'Yodium (I)',v:'50–2000 ppm'},{k:'Bromin (Br)',v:'500–3000 ppm'},{k:'Pasokan I Jepang',v:'35% global'}]
+  },
+  {
+    id:'cairan-hidrotermal',
+    name:'Cairan Hidrotermal Laut Dalam',
+    latin:'Seafloor Hydrothermal Fluid',
+    tag:'Mid-Ocean Ridge',
+    cat:'hidrotermal',
+    c1:'#3fb8af', c2:'#0f766e',
+    icon:`<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/><circle cx="12" cy="11" r="1"/></svg>`,
+    desc:'Cairan bersuhu ekstrem (350–400°C) yang keluar dari ventilasi hidrotermal (black smoker) di sepisan tengah samudra — batas divergen lempeng.',
+    depth:'2–4 km bawah laut',
+    temp:'350–400°C',
+    source:'Mid-ocean ridge, batas lempeng divergen',
+    composition:'H₂S, CH₄, Fe, Mn, Cu, Zn, SiO₂, klorida logam',
+    products:'Zinc, tembaga, mangan, emas, perak, silika (potensial)',
+    detail:'Cairan hidrotermal laut dalam terbentuk saat air laut meresap melalui rekahan kerak samudra di mid-ocean ridge, dipanaskan oleh magma hingga 400°C, melarutkan logam dari batuan basal, lalu keluar sebagai black smoker. Meskipun belum ditambang komersial, cairan ini menjadi sumber mineral logam masa depan — terutama tembaga, seng, emas, dan logam tanah jarang. Beberapa perusahaan sedang mengembangkan teknologi deep-sea mining untuk menambang endapan SMS (Seafloor Massive Sulfide) di lokasi ini.',
+    process:['Identifikasi ventilasi hidrotermal aktif','Pemetaan & evaluasi endapan SMS','Pengeboran bawah laut dengan ROV','Lift hidraulik ke permukaan','Pemisahan logam di kapal pengolahan'],
+    uses:['Tembaga untuk kabel & elektronik','Seng untuk pelapis anti-karat','Emas & perak untuk elektronik','Mangan untuk baja & baterai','Logam tanah jarang untuk magnet'],
+    stat:[{k:'Suhu Cairan',v:'350–400°C'},{k:'Kedalaman',v:'2–4 km'},{k:'Kandungan Cu',v:'5–15%'},{k:'Kandungan Zn',v:'10–30%'}]
+  }
+];
+
+// === RENDER CARDS ===
+const grid = document.getElementById('cardGrid');
+if(!grid){ console.error('cardGrid not found'); }
+
+function renderCards(filter='all'){
+  if(!grid) return;
+  const list = filter==='all' ? fluids : fluids.filter(f=>f.cat===filter);
+  grid.innerHTML = list.map((f,i)=>`
+    <article class="card fade-up" style="animation-delay:${i*60}ms" data-id="${f.id}">
+      <div class="card-head">
+        <div class="card-icon" style="--c1:${f.c1};--c2:${f.c2}">
+          <div class="glow"></div>
+          <div class="shimmer"></div>
+          ${f.icon}
+        </div>
+        <span class="card-tag">${f.tag}</span>
+      </div>
+      <h4>${f.name}</h4>
+      <div class="latin">${f.latin}</div>
+      <div class="card-desc">${f.desc}</div>
+      <div class="card-meta">
+        <div class="meta-row">
+          <span class="meta-key">Sumber</span>
+          <span class="meta-val">${f.source}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Komposisi</span>
+          <span class="meta-val">${f.composition}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Turunan</span>
+          <span class="meta-val">${f.products}</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <div class="depth">Kedalaman: <b>${f.depth}</b> · Suhu: <b>${f.temp}</b></div>
+        <div class="arrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+      </div>
+    </article>
+  `).join('');
+
+  // attach click handlers (re-bind each render to avoid stale refs)
+  document.querySelectorAll('.card').forEach(card=>{
+    card.addEventListener('click',(e)=>{
+      e.preventDefault();
+      openDrawer(card.dataset.id);
+    });
+  });
+}
+
+// === DRAWER ===
+const drawer = document.getElementById('drawer');
+const backdrop = document.getElementById('drawerBackdrop');
+const drawerHead = document.getElementById('drawerHead');
+const drawerBody = document.getElementById('drawerBody');
+
+function openDrawer(id){
+  const f = fluids.find(x=>x.id===id);
+  if(!f){ console.warn('Fluid not found:', id); return; }
+  if(!drawerHead || !drawerBody || !drawer || !backdrop){ console.error('Drawer elements missing'); return; }
+  drawerHead.innerHTML = `
+    <button type="button" class="drawer-close" aria-label="Tutup">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="drawer-icon" style="--c1:${f.c1};--c2:${f.c2};background:radial-gradient(circle at 30% 30%,${f.c1},${f.c2})">
+      ${f.icon}
+    </div>
+    <h4>${f.name}</h4>
+    <div class="latin">${f.latin} · ${f.tag}</div>
+  `;
+  drawerBody.innerHTML = `
+    <div class="drawer-section">
+      <h6>Deskripsi Geologis</h6>
+      <p>${f.detail}</p>
+    </div>
+    <div class="drawer-section">
+      <h6>Statistik Kunci</h6>
+      <div class="drawer-stats">
+        ${f.stat.map(s=>`<div class="drawer-stat"><div class="k">${s.k}</div><div class="v">${s.v}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="drawer-section">
+      <h6>Proses Industri</h6>
+      <ul class="drawer-list">
+        ${f.process.map(p=>`<li>${p}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="drawer-section">
+      <h6>Turunan & Penggunaan</h6>
+      <ul class="drawer-list">
+        ${f.uses.map(u=>`<li><b>·</b> ${u}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="drawer-section">
+      <h6>Komposisi & Sumber</h6>
+      <p><b style="color:var(--text)">Sumber geologis:</b> ${f.source}<br><br>
+      <b style="color:var(--text)">Komposisi utama:</b> ${f.composition}<br><br>
+      <b style="color:var(--text)">Produk turunan:</b> ${f.products}</p>
+    </div>
+  `;
+  drawer.classList.add('open');
+  backdrop.classList.add('open');
+  document.body.style.overflow='hidden';
+  // bind the close button inside the freshly rendered drawer head
+  const closeBtn = drawerHead.querySelector('.drawer-close');
+  if(closeBtn){ closeBtn.addEventListener('click', closeDrawer); }
+  // auto-scroll drawer to top on each open
+  drawer.scrollTop = 0;
+}
+function closeDrawer(){
+  if(!drawer || !backdrop) return;
+  drawer.classList.remove('open');
+  backdrop.classList.remove('open');
+  document.body.style.overflow='';
+}
+window.closeDrawer = closeDrawer;
+if(backdrop){ backdrop.addEventListener('click',closeDrawer); }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
+
+// === FILTERS ===
+function setFilter(filter){
+  if(!filter) filter = 'all';
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.classList.toggle('active',c.dataset.filter===filter);
+  });
+  document.querySelectorAll('.nav-item[data-filter]').forEach(n=>{
+    n.classList.toggle('active',n.dataset.filter===filter);
+  });
+  renderCards(filter);
+}
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',(e)=>{ e.preventDefault(); setFilter(c.dataset.filter); });
+});
+document.querySelectorAll('.nav-item[data-filter]').forEach(n=>{
+  n.addEventListener('click',(e)=>{ e.preventDefault(); setFilter(n.dataset.filter); });
+});
+
+// === NAV: process flow scroll ===
+const navProcess = document.getElementById('navProcess');
+if(navProcess){ navProcess.addEventListener('click',(e)=>{
+  e.preventDefault();
+  const target = document.getElementById('processFlow');
+  if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+}); }
+const navAbout = document.getElementById('navAbout');
+if(navAbout){ navAbout.addEventListener('click',(e)=>{
+  e.preventDefault();
+  const target = document.querySelector('.hero');
+  if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+}); }
+
+// === REVEAL on scroll ===
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting) e.target.classList.add('visible');
+  });
+},{threshold:0.1});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+
+// === INIT ===
+renderCards('all');
+</script>
+</body>
+</html>
